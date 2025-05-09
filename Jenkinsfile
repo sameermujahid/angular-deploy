@@ -77,12 +77,7 @@ pipeline {
                             start "" "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe"
                             
                             echo Waiting for Docker to start...
-                            for /L %%i in (1,1,30) do (
-                                "%DOCKER_PATH%\\docker.exe" info > nul 2>&1
-                                if not errorlevel 1 goto :docker_ready
-                                timeout /t 1 /nobreak > nul
-                            )
-                            :docker_ready
+                            ping 127.0.0.1 -n 31 > nul
                             
                             echo Testing Docker command...
                             "%DOCKER_PATH%\\docker.exe" info
