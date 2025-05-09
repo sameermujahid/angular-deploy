@@ -145,7 +145,7 @@ pipeline {
     
     post {
         always {
-            cleanWs()
+            cleanWs(patterns: [[pattern: '**/*', type: 'INCLUDE']], deleteDirs: true, disableDeferredWipeout: true)
         }
         failure {
             echo 'Pipeline failed!'
