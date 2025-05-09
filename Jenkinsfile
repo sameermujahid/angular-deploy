@@ -3,6 +3,8 @@ pipeline {
     
     environment {
         NODE_VERSION = '18.x'
+        NODE_HOME = tool 'NodeJS 18.x'
+        PATH = "${env.NODE_HOME};${env.PATH}"
     }
     
     stages {
@@ -32,7 +34,11 @@ pipeline {
             steps {
                 script {
                     try {
-                        bat 'npm install'
+                        bat """
+                            echo "Current PATH: %PATH%"
+                            echo "NODE_HOME: %NODE_HOME%"
+                            "%NODE_HOME%\\npm.cmd" install
+                        """
                     } catch (Exception e) {
                         echo "Error installing dependencies: ${e.message}"
                         error "Dependencies installation failed"
@@ -45,7 +51,9 @@ pipeline {
             steps {
                 script {
                     try {
-                        bat 'npm run build'
+                        bat """
+                            "%NODE_HOME%\\npm.cmd" run build
+                        """
                     } catch (Exception e) {
                         echo "Error building application: ${e.message}"
                         error "Build failed"
