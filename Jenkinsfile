@@ -7,6 +7,7 @@ pipeline {
         PATH = "${env.NODE_HOME};${env.PATH}"
         DOCKER_IMAGE = 'sameermujahid/angular-deploy'
         DOCKER_TAG = "${env.BUILD_NUMBER}"
+        DOCKER_PATH = 'C:\\Program Files\\Docker\\Docker\\resources\\bin'
     }
     
     stages {
@@ -68,13 +69,13 @@ pipeline {
             steps {
                 script {
                     try {
-                        bat """
-                            echo "Checking Docker service status..."
-                            sc query docker
-                            echo "Checking Docker Desktop status..."
-                            tasklist /FI "IMAGENAME eq Docker Desktop.exe"
-                            echo "Testing Docker command..."
-                            docker info
+                        powershell """
+                            Write-Host 'Checking Docker service status...'
+                            Get-Service -Name 'com.docker.service' | Select-Object Name, Status
+                            Write-Host 'Checking Docker Desktop process...'
+                            Get-Process -Name 'Docker Desktop' -ErrorAction SilentlyContinue
+                            Write-Host 'Testing Docker command...'
+                            & '${DOCKER_PATH}\\docker.exe' info
                         """
                     } catch (Exception e) {
                         echo "Docker service check failed: ${e.message}"
@@ -88,11 +89,11 @@ pipeline {
             steps {
                 script {
                     try {
-                        bat """
-                            echo "Building Docker image..."
-                            docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
-                            echo "Tagging Docker image..."
-                            docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
+                        powershell """
+                            Write-Host 'Building Docker image...'
+                            & '${DOCKER_PATH}\\docker.exe' build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
+                            Write-Host 'Tagging Docker image...'
+                            & '${DOCKER_PATH}\\docker.exe' tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
                         """
                     } catch (Exception e) {
                         echo "Error building Docker image: ${e.message}"
@@ -107,12 +108,12 @@ pipeline {
                 script {
                     withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
                         try {
-                            bat """
-                                echo "Logging in to Docker Hub..."
-                                docker login -u %DOCKER_USERNAME% -p %DOCKER_PASSWORD%
-                                echo "Pushing Docker image..."
-                                docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
-                                docker push ${DOCKER_IMAGE}:latest
+                            powershell """
+                                Write-Host 'Logging in to Docker Hub...'
+                                & '${DOCKER_PATH}\\docker.exe' login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
+                                Write-Host 'Pushing Docker image...'
+                                & '${DOCKER_PATH}\\docker.exe' push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                                & '${DOCKER_PATH}\\docker.exe' push ${DOCKER_IMAGE}:latest
                             """
                         } catch (Exception e) {
                             echo "Error pushing to Docker Hub: ${e.message}"
