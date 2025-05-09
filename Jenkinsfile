@@ -69,48 +69,23 @@ pipeline {
             steps {
                 script {
                     try {
-                        powershell """
-                            Write-Host 'Checking Docker service status...'
-                            \$service = Get-Service -Name 'com.docker.service' -ErrorAction SilentlyContinue
-                            if (\$service -and \$service.Status -ne 'Running') {
-                                Write-Host 'Docker service is not running. Attempting to start...'
-                                Start-Process 'C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe' -Verb RunAs
-                                Start-Sleep -Seconds 30
-                            }
+                        bat """
+                            echo Checking Docker service...
+                            "%DOCKER_PATH%\\docker.exe" info
                             
-                            Write-Host 'Checking Docker Desktop process...'
-                            \$dockerProcess = Get-Process -Name 'Docker Desktop' -ErrorAction SilentlyContinue
-                            if (-not \$dockerProcess) {
-                                Write-Host 'Docker Desktop is not running. Starting it...'
-                                Start-Process 'C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe' -Verb RunAs
-                                Start-Sleep -Seconds 30
-                            }
+                            echo Starting Docker Desktop...
+                            start "" "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe"
                             
-                            Write-Host 'Testing Docker command...'
-                            \$maxAttempts = 3
-                            \$attempt = 0
-                            \$success = \$false
+                            echo Waiting for Docker to start...
+                            for /L %%i in (1,1,30) do (
+                                "%DOCKER_PATH%\\docker.exe" info > nul 2>&1
+                                if not errorlevel 1 goto :docker_ready
+                                timeout /t 1 /nobreak > nul
+                            )
+                            :docker_ready
                             
-                            while (-not \$success -and \$attempt -lt \$maxAttempts) {
-                                \$attempt++
-                                try {
-                                    \$result = & '${DOCKER_PATH}\\docker.exe' info 2>&1
-                                    if (\$LASTEXITCODE -eq 0) {
-                                        \$success = \$true
-                                        Write-Host "Docker is ready after \$attempt attempts"
-                                    } else {
-                                        Write-Host "Attempt \$attempt failed, waiting before retry..."
-                                        Start-Sleep -Seconds 10
-                                    }
-                                } catch {
-                                    Write-Host "Attempt \$attempt failed with error: \$_\"
-                                    Start-Sleep -Seconds 10
-                                }
-                            }
-                            
-                            if (-not \$success) {
-                                throw "Failed to verify Docker after \$maxAttempts attempts"
-                            }
+                            echo Testing Docker command...
+                            "%DOCKER_PATH%\\docker.exe" info
                         """
                     } catch (Exception e) {
                         echo "Docker service check failed: ${e.message}"
@@ -124,11 +99,11 @@ pipeline {
             steps {
                 script {
                     try {
-                        powershell """
-                            Write-Host 'Building Docker image...'
-                            & '${DOCKER_PATH}\\docker.exe' build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
-                            Write-Host 'Tagging Docker image...'
-                            & '${DOCKER_PATH}\\docker.exe' tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
+                        bat """
+                            echo Building Docker image...
+                            "%DOCKER_PATH%\\docker.exe" build -t %DOCKER_IMAGE%:%DOCKER_TAG% .
+                            echo Tagging Docker image...
+                            "%DOCKER_PATH%\\docker.exe" tag %DOCKER_IMAGE%:%DOCKER_TAG% %DOCKER_IMAGE%:latest
                         """
                     } catch (Exception e) {
                         echo "Error building Docker image: ${e.message}"
@@ -143,12 +118,12 @@ pipeline {
                 script {
                     withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
                         try {
-                            powershell """
-                                Write-Host 'Logging in to Docker Hub...'
-                                & '${DOCKER_PATH}\\docker.exe' login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
-                                Write-Host 'Pushing Docker image...'
-                                & '${DOCKER_PATH}\\docker.exe' push ${DOCKER_IMAGE}:${DOCKER_TAG}
-                                & '${DOCKER_PATH}\\docker.exe' push ${DOCKER_IMAGE}:latest
+                            bat """
+                                echo Logging in to Docker Hub...
+                                "%DOCKER_PATH%\\docker.exe" login -u %DOCKER_USERNAME% -p %DOCKER_PASSWORD%
+                                echo Pushing Docker image...
+                                "%DOCKER_PATH%\\docker.exe" push %DOCKER_IMAGE%:%DOCKER_TAG%
+                                "%DOCKER_PATH%\\docker.exe" push %DOCKER_IMAGE%:latest
                             """
                         } catch (Exception e) {
                             echo "Error pushing to Docker Hub: ${e.message}"
