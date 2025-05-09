@@ -71,11 +71,46 @@ pipeline {
                     try {
                         powershell """
                             Write-Host 'Checking Docker service status...'
-                            Get-Service -Name 'com.docker.service' | Select-Object Name, Status
+                            \$service = Get-Service -Name 'com.docker.service' -ErrorAction SilentlyContinue
+                            if (\$service -and \$service.Status -ne 'Running') {
+                                Write-Host 'Docker service is not running. Attempting to start...'
+                                Start-Process 'C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe' -Verb RunAs
+                                Start-Sleep -Seconds 30
+                            }
+                            
                             Write-Host 'Checking Docker Desktop process...'
-                            Get-Process -Name 'Docker Desktop' -ErrorAction SilentlyContinue
+                            \$dockerProcess = Get-Process -Name 'Docker Desktop' -ErrorAction SilentlyContinue
+                            if (-not \$dockerProcess) {
+                                Write-Host 'Docker Desktop is not running. Starting it...'
+                                Start-Process 'C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe' -Verb RunAs
+                                Start-Sleep -Seconds 30
+                            }
+                            
                             Write-Host 'Testing Docker command...'
-                            & '${DOCKER_PATH}\\docker.exe' info
+                            \$maxAttempts = 3
+                            \$attempt = 0
+                            \$success = \$false
+                            
+                            while (-not \$success -and \$attempt -lt \$maxAttempts) {
+                                \$attempt++
+                                try {
+                                    \$result = & '${DOCKER_PATH}\\docker.exe' info 2>&1
+                                    if (\$LASTEXITCODE -eq 0) {
+                                        \$success = \$true
+                                        Write-Host "Docker is ready after \$attempt attempts"
+                                    } else {
+                                        Write-Host "Attempt \$attempt failed, waiting before retry..."
+                                        Start-Sleep -Seconds 10
+                                    }
+                                } catch {
+                                    Write-Host "Attempt \$attempt failed with error: \$_\"
+                                    Start-Sleep -Seconds 10
+                                }
+                            }
+                            
+                            if (-not \$success) {
+                                throw "Failed to verify Docker after \$maxAttempts attempts"
+                            }
                         """
                     } catch (Exception e) {
                         echo "Docker service check failed: ${e.message}"
