@@ -64,12 +64,34 @@ pipeline {
             }
         }
         
+        stage('Check Docker Service') {
+            steps {
+                script {
+                    try {
+                        bat """
+                            echo "Checking Docker service status..."
+                            sc query docker
+                            echo "Checking Docker Desktop status..."
+                            tasklist /FI "IMAGENAME eq Docker Desktop.exe"
+                            echo "Testing Docker command..."
+                            docker info
+                        """
+                    } catch (Exception e) {
+                        echo "Docker service check failed: ${e.message}"
+                        error "Docker service is not running properly"
+                    }
+                }
+            }
+        }
+        
         stage('Build Docker Image') {
             steps {
                 script {
                     try {
                         bat """
+                            echo "Building Docker image..."
                             docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
+                            echo "Tagging Docker image..."
                             docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
                         """
                     } catch (Exception e) {
@@ -86,7 +108,9 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
                         try {
                             bat """
+                                echo "Logging in to Docker Hub..."
                                 docker login -u %DOCKER_USERNAME% -p %DOCKER_PASSWORD%
+                                echo "Pushing Docker image..."
                                 docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
                                 docker push ${DOCKER_IMAGE}:latest
                             """
