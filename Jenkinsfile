@@ -5,6 +5,8 @@ pipeline {
         NODE_VERSION = '18.x'
         NODE_HOME = tool 'NodeJS 18.x'
         PATH = "${env.NODE_HOME};${env.PATH}"
+        DOCKER_IMAGE = 'sameermujahid/angular-deploy'
+        DOCKER_TAG = "${env.BUILD_NUMBER}"
     }
     
     stages {
@@ -57,6 +59,41 @@ pipeline {
                     } catch (Exception e) {
                         echo "Error building application: ${e.message}"
                         error "Build failed"
+                    }
+                }
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    try {
+                        bat """
+                            docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
+                            docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
+                        """
+                    } catch (Exception e) {
+                        echo "Error building Docker image: ${e.message}"
+                        error "Docker build failed"
+                    }
+                }
+            }
+        }
+        
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                        try {
+                            bat """
+                                docker login -u %DOCKER_USERNAME% -p %DOCKER_PASSWORD%
+                                docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                                docker push ${DOCKER_IMAGE}:latest
+                            """
+                        } catch (Exception e) {
+                            echo "Error pushing to Docker Hub: ${e.message}"
+                            error "Docker push failed"
+                        }
                     }
                 }
             }
