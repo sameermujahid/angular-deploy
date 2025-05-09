@@ -14,28 +14,56 @@ pipeline {
         
         stage('Setup Node.js') {
             steps {
-                nodejs(nodeJSInstallationName: 'NodeJS') {
-                    sh 'node --version'
-                    sh 'npm --version'
+                script {
+                    try {
+                        nodejs(nodeJSInstallationName: 'NodeJS 18.x') {
+                            sh 'node --version'
+                            sh 'npm --version'
+                        }
+                    } catch (Exception e) {
+                        echo "Error setting up Node.js: ${e.message}"
+                        error "Node.js setup failed"
+                    }
                 }
             }
         }
         
         stage('Install Dependencies') {
             steps {
-                sh 'npm install'
+                script {
+                    try {
+                        sh 'npm install'
+                    } catch (Exception e) {
+                        echo "Error installing dependencies: ${e.message}"
+                        error "Dependencies installation failed"
+                    }
+                }
             }
         }
         
         stage('Build') {
             steps {
-                sh 'npm run build'
+                script {
+                    try {
+                        sh 'npm run build'
+                    } catch (Exception e) {
+                        echo "Error building application: ${e.message}"
+                        error "Build failed"
+                    }
+                }
             }
         }
         
         stage('Archive') {
             steps {
-                archiveArtifacts artifacts: 'dist/**/*', fingerprint: true
+                script {
+                    try {
+                        archiveArtifacts artifacts: 'dist/**/*', fingerprint: true
+                    } catch (Exception e) {
+                        echo "Error archiving artifacts: ${e.message}"
+                        error "Archiving failed"
+                    }
+                }
             }
         }
     }
@@ -43,6 +71,12 @@ pipeline {
     post {
         always {
             cleanWs()
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+        success {
+            echo 'Pipeline succeeded!'
         }
     }
 } 
