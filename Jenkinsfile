@@ -70,14 +70,14 @@ pipeline {
                 script {
                     try {
                         bat """
-                            echo Checking Docker service status...
-                            sc query com.docker.service
+                            echo Checking Docker service...
+                            "%DOCKER_PATH%\\docker.exe" info
                             
                             echo Starting Docker Desktop...
                             start "" "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe"
                             
                             echo Waiting for Docker to start...
-                            timeout /t 30 /nobreak
+                            ping 127.0.0.1 -n 31 > nul
                             
                             echo Testing Docker command...
                             "%DOCKER_PATH%\\docker.exe" info
