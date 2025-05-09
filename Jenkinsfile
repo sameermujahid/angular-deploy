@@ -17,8 +17,8 @@ pipeline {
                 script {
                     try {
                         nodejs(nodeJSInstallationName: 'NodeJS 18.x') {
-                            sh 'node --version'
-                            sh 'npm --version'
+                            bat 'node --version'
+                            bat 'npm --version'
                         }
                     } catch (Exception e) {
                         echo "Error setting up Node.js: ${e.message}"
@@ -32,7 +32,7 @@ pipeline {
             steps {
                 script {
                     try {
-                        sh 'npm install'
+                        bat 'npm install'
                     } catch (Exception e) {
                         echo "Error installing dependencies: ${e.message}"
                         error "Dependencies installation failed"
@@ -45,7 +45,7 @@ pipeline {
             steps {
                 script {
                     try {
-                        sh 'npm run build'
+                        bat 'npm run build'
                     } catch (Exception e) {
                         echo "Error building application: ${e.message}"
                         error "Build failed"
