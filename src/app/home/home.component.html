@@ -1,0 +1,33 @@
+<div class="home-container">
+  <div class="welcome-section">
+    <h1>Welcome to Angular Jenkins Demo</h1>
+    <p>This is a simple Angular application deployed using Jenkins</p>
+  </div>
+
+  <div class="interactive-section">
+    <div class="counter-card">
+      <h2>Counter: {{counter}}</h2>
+      <button (click)="incrementCounter()" class="btn">Click Me!</button>
+    </div>
+
+    <div class="message-board">
+      <h2>Message Board</h2>
+      <div class="message-input">
+        <input 
+          type="text" 
+          [(ngModel)]="newMessage" 
+          placeholder="Type a message..."
+          (keyup.enter)="addMessage()"
+        >
+        <button (click)="addMessage()" class="btn">Add Message</button>
+      </div>
+      
+      <div class="messages-list">
+        <div *ngFor="let message of messages; let i = index" class="message-item">
+          <span>{{message}}</span>
+          <button (click)="removeMessage(i)" class="btn-remove">×</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
